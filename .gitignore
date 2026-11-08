@@ -1,0 +1,13 @@
+# Python environment
+.venv/
+__pycache__/
+
+# Data: raw IMDb files are large and licensed, never commit them
+data/raw/
+data/processed/
+*.tsv
+*.tsv.gz
+
+# Notebook and Mac clutter
+.ipynb_checkpoints/
+.DS_Store
