@@ -1,6 +1,7 @@
 # Movie Pulse
 
 What makes a movie well-rated, and can a model predict it?
+**Live app:** https://movie-pulse.streamlit.app
 A learning project in data science and ML using IMDb's official non-commercial datasets.
 
 ## Data
