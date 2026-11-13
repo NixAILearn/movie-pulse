@@ -93,7 +93,7 @@ with explore:
     st.scatter_chart(sample.sample(min(len(sample), 3000), random_state=42),
                      x="runtime", y="rating")
 
-    # ---------- Predict ----------
+# ---------- Predict ----------
 with predict:
     st.write("Pick a movie. The model only sees facts known before release: "
              "year, runtime, genres and the director's earlier films.")
@@ -119,7 +119,7 @@ with predict:
                    "This is an honest test.")
     st.caption("Random forest, test MAE 0.73 vs 0.96 for always guessing the average.")
 
-    # ---------- Movies like this ----------
+# ---------- Movies like this ----------
 with like_this:
     popular = movies[movies["votes"] >= MIN_VOTES]
     tconst = st.selectbox("Find movies like", popular["tconst"], key="like_movie",
@@ -187,24 +187,39 @@ with tv:
     st.caption(f"{len(jumped)} of {len(sharks)} long-running shows jumped: a drop of at least "
                f"{SHARK_DROP} and a fit gain of at least {SHARK_FIT}.")
 
-    # ---------- Findings ----------
+# ---------- Findings ----------
 with findings:
     st.markdown("""
 ### What I found
-1. **Older films rate higher, but that's survivorship bias.** Only old films people still watch
-   get 1,000+ votes today. 
-2. **Genre matters.** Horror is lowest on average; Documentary and Biography are highest. Was not expecting the Thriller genre to in the bottom 3 genres
-3. **Consistent isn't the same as great. Surprised to see no familiar names in consistent directors but their Average rating is high for e.g Nolan with average rating of 8.18 but was not in top 5 consistent directors** 
+1. **Old movies rate higher, but that's partly survivorship bias.** The 1920s average 7.02
+   and the 2010s 6.07. Only the old films people still watch reach 1,000+ votes today.
+2. **Genre matters.** Horror is lowest (5.25); Documentary (7.19) and Biography (6.90) are
+   highest. I didn't expect Thriller in the bottom 3 (5.82), and my favourite genres
+   aren't even in the top 3.
+3. **Great isn't the same as consistent.** Christopher Nolan averages 8.18 but isn't in the
+   top 5 most consistent directors. The most consistent ones were names I didn't know.
+4. **Longer movies rate higher.** Films over 3 hours average 7.28 vs 5.77 for 80 to 90
+   minutes, but the correlation is only 0.26: long films tend to be prestige dramas.
+5. **More votes go with higher ratings.** Films with 500,000+ votes average 7.76. That's
+   why the vote count can't be a model feature: it would leak the answer.
 
 ### How well can a model predict a rating?
 - Using only facts known before release, a random forest is off by **0.73** stars on average
   for films from 2015 on, vs **0.96** for always guessing the average: 24% better.
-- The director's past average is the strongest feature. It also pulls predictions toward
-  the middle, so great films get under-predicted.
+- Linear regression scored 0.76. The forest wins because it can learn combinations and
+  thresholds, once `min_samples_leaf=20` stopped it memorising the training films.
 - A director average that includes the film itself scored a fake 0.31. That's leakage.
+
+### When TV shows jump the shark
+- **54 of 276** long-running shows had a clear, lasting drop. Top Gear fell the furthest:
+  8.15 to 5.19 from season 23.
+- **Game of Thrones** fell from 8.94 to 7.70, but the seasons bounce around too much
+  (fit gain 0.39) to call it one clean shift.
+- **Friends** stayed consistent and ended slightly better (8.21 to 8.31): no shark.
 
 ### Limits
 - No plot, budget or box office in IMDb's free data.
 - The recommender only knows genres, decade, director and top 3 cast.
 - Ratings are from IMDb users, who aren't everyone.
+- Shows cancelled early never reach 6 seasons, so they can't show up as sharks.
 """)
