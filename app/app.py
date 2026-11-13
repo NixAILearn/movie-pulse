@@ -20,6 +20,14 @@ def load_data():
                        + " · " + movies["director"].fillna("unknown"))
     return movies, tags
 
+@st.cache_data
+def load_tv():
+    seasons = pd.read_parquet(HERE / "data" / "tv_seasons_app.parquet")
+    sharks = pd.read_parquet(HERE / "data" / "tv_sharks_app.parquet")
+    sharks = sharks.merge(
+        seasons.groupby("showTconst", as_index=False)["showVotes"].first(), on="showTconst")
+    sharks["label"] = sharks["showTitle"] + " (" + sharks["startYear"].astype("string") + ")"
+    return seasons, sharks.sort_values("showVotes", ascending=False)
 
 @st.cache_resource
 def load_model():
@@ -38,13 +46,15 @@ movies, tags = load_data()
 model = load_model()
 X = build_matrix(movies, tags)
 FEATURES = list(model.feature_names_in_)
+seasons, sharks = load_tv()
+SHARK_DROP, SHARK_FIT = 0.5, 0.5
 
 st.title("🎬 Movie Pulse")
 st.caption(f"What makes a movie well-rated? {len(movies):,} movies with 1,000+ votes. "
            "Information courtesy of IMDb (https://www.imdb.com). Used with permission.")
 
-explore, predict, like_this, findings = st.tabs(
-    ["Explore", "Predict", "Movies like this", "Findings"])
+explore, predict, like_this, tv, findings = st.tabs(
+    ["Explore", "Predict", "Movies like this", "TV death curves", "Findings"])
 
 # ---------- Explore ----------
 with explore:
@@ -133,6 +143,49 @@ with like_this:
     tb = tags[tags["tconst"] == other]
     shared = ta[ta["tag"].isin(tb["tag"])].sort_values("weight", ascending=False)
     st.dataframe(shared[["kind", "label", "n_films", "weight"]].round(2), hide_index=True)
+
+
+# ---------- TV death curves ----------
+with tv:
+    st.write("Pick a long-running show. The detector splits its seasons into a "
+             "\"before\" and \"after\" level and finds where the shift happened.")
+    show_id = st.selectbox("Show", sharks["showTconst"], key="tv_show",
+                           format_func=dict(zip(sharks["showTconst"], sharks["label"])).get)
+    show = sharks[sharks["showTconst"] == show_id].iloc[0]
+    g = seasons[seasons["showTconst"] == show_id].sort_values("seasonNumber")
+
+    a, b, c, d = st.columns(4)
+    a.metric("Shark season", f"S{show['shark_season']}")
+    b.metric("Before", f"{show['before']:.2f}")
+    c.metric("After", f"{show['after']:.2f}", delta=f"{-show['drop']:+.2f}")
+    d.metric("Fit gain", f"{show['fit_gain']:.2f}")
+
+    if show["drop"] >= SHARK_DROP and show["fit_gain"] >= SHARK_FIT:
+        st.error(f"Jumped the shark in season {show['shark_season']}.")
+    elif show["drop"] <= -SHARK_DROP and show["fit_gain"] >= SHARK_FIT:
+        st.success(f"Got better from season {show['shark_season']} on.")
+    elif show["drop"] >= SHARK_DROP:
+        st.warning(f"A big drop from season {show['shark_season']}, but the seasons bounce "
+                   "around too much to call it one clean shift.")
+    else:
+        st.info("No clear shift: the split doesn't beat one flat line by enough.")
+
+    chart = pd.DataFrame({
+        "season": g["seasonNumber"].astype(int),
+        "season average": g["avg_rating"].round(2),
+        "before / after level": [show["before"] if s < show["shark_season"] else show["after"]
+                                 for s in g["seasonNumber"]],
+    })
+    st.line_chart(chart, x="season", y=["season average", "before / after level"])
+
+    st.subheader("Biggest sharks")
+    jumped = (sharks[(sharks["drop"] >= SHARK_DROP) & (sharks["fit_gain"] >= SHARK_FIT)]
+              .sort_values("drop", ascending=False))
+    st.dataframe(jumped[["showTitle", "startYear", "n_seasons", "shark_season",
+                         "before", "after", "drop"]].head(15),
+                 hide_index=True, width="stretch")
+    st.caption(f"{len(jumped)} of {len(sharks)} long-running shows jumped: a drop of at least "
+               f"{SHARK_DROP} and a fit gain of at least {SHARK_FIT}.")
 
     # ---------- Findings ----------
 with findings:
