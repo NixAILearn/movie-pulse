@@ -25,3 +25,6 @@ To reproduce, download them into data/raw/ (see Sprint 1).
 - **Sprint 5: Recommender.** Built a "movies like this" recommender: each movie is a sparse vector of tags (genres, decade, director, top 3 cast), compared with cosine similarity.
 - Version 1 (equal weights) ranked obscure films first, because thin profiles of 3-4 tags match too easily. IDF weighting (rare tags count more), double weight on genres and a 20,000-vote floor fixed it: Parasite now returns five Bong Joon Ho films.
 - No answer key, so I sanity-checked by eye and built explain() to show shared tags. Limits: no plot data (Oppenheimer gets documentaries), and the vote floor adds popularity bias.
+- **Sprint 6: Streamlit dashboard.** Shipped a live app with four tabs: Explore (decade and genre filters), Predict (actual vs predicted rating), Movies like this, and Findings.
+- An export notebook retrains the Sprint 4 forest (test MAE 0.728), saves it with joblib (7.5 MB), and writes trimmed Parquet files (about 5 MB) to app/; raw and processed data stay out of Git. Pinned package versions so the cloud loads the same model.
+- Picked movies by tconst instead of title, fixing the duplicate-title bug from Sprint 5, and flagged predictions for pre-2015 films as in-sample (the model trained on them).
